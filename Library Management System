@@ -1,0 +1,106 @@
+CREATE DATABASE EPMS;
+USE EPMS;
+
+
+CREATE TABLE Department(
+    Department_id INT PRIMARY KEY,
+    Department_name VARCHAR(25),
+    Location VARCHAR(30)
+);
+
+
+INSERT INTO Department VALUES
+ (1, 'HR', 'Head Office'),
+ (2, 'Finance', 'Head Office'),
+ (3, 'IT', 'Tech Park'),
+ (4, 'Sales', 'Regional Office'),
+ (5, 'Marketing', 'Regional Office');
+ 
+ 
+ CREATE TABLE Employees(
+    Employee_id INT PRIMARY KEY,
+    Department_id INT,
+    First_Name VARCHAR(35),
+    Last_Name VARCHAR(35),
+    Email VARCHAR(40),
+    Salary DECIMAL(10,2),
+    Hire_date DATE,
+    FOREIGN KEY (Department_id) REFERENCES Department(Department_id)
+);
+
+
+
+INSERT INTO Employees VALUES
+    (101,1,'Shaswat','Mehra','shas@gmail.com',80000,'2023-05-01'),
+    (102,2,'Ravi','Kumar','rav@gmail.com',50000,'2023-10-24'),
+    (103,3,'Afzal','Imam','afzal@gmail.com',55000,'2024-01-05'),
+    (104,4,'Akhalque','Rahman','ak@gmail.com',65000,'2025-05-07'),
+    (105,5,'Rahul','Gupta','rg@gmail.com',70000,'2022-10-28');
+    
+    
+
+CREATE TABLE Payroll(
+    Payroll_id INT PRIMARY KEY AUTO_INCREMENT,
+    Employee_id INT,
+    Payperiodstart DATE,
+    Payperiodend DATE,
+    Gross_pay DECIMAL(10,2),
+    Tax_deduction DECIMAL(10,2),
+    Net_pay DECIMAL(10,2),
+    FOREIGN KEY (Employee_id) REFERENCES Employees(Employee_id)
+);
+
+
+
+CREATE TABLE Users (
+    UserID INT PRIMARY KEY AUTO_INCREMENT,
+    UserName VARCHAR(50) NOT NULL UNIQUE,
+    PasswordHash VARCHAR(155) NOT NULL,
+    Role VARCHAR(20) CHECK (Role IN ('HR Manager','Department Head'))
+);
+
+
+-- Insert sample users
+INSERT INTO Users (UserName, PasswordHash, Role) VALUES
+('hr_admin','hashed_pwd1','HR Manager'),
+('sales_head','hashed_pwd2','Department Head');
+
+
+
+DELIMITER $$
+
+CREATE PROCEDURE CalculateSalary(
+    IN P_Employee_id INT,
+    IN P_Start DATE,
+    IN P_End DATE,
+    IN P_Gross DECIMAL(10,2)
+)
+BEGIN
+    DECLARE v_Tax DECIMAL(10,2);
+    DECLARE v_Net DECIMAL(10,2);
+    
+    START TRANSACTION;
+    
+    SET v_Tax = P_Gross * 0.10;
+    SET v_Net = P_Gross - v_Tax;
+    
+    INSERT INTO Payroll (Employee_id, Payperiodstart, Payperiodend, Gross_pay, Tax_deduction, Net_pay)
+    VALUES (P_Employee_id, P_Start, P_End, P_Gross, v_Tax, v_Net);
+    
+    COMMIT;
+END $$
+
+DELIMITER ;
+
+
+
+CALL CalculateSalary(101, '2025-10-01', '2025-10-31', 100000);
+
+CALL CalculateSalary(102, '2025-10-01', '2025-10-31', 75000);
+
+CALL CalculateSalary(103, '2025-10-01', '2025-10-31', 50000);
+
+
+CREATE USER IF NOT EXISTS 'hr_manager'@'localhost' IDENTIFIED BY 'hr123';
+GRANT ALL PRIVILEGES ON EPMS.* TO 'hr_manager'@'localhost';
+FLUSH PRIVILEGES;
